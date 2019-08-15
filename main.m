@@ -114,30 +114,32 @@ g = [g; st - p(1:n_states)];
 
 % The following loop is aim to calculate the cost function and constrains
 for i = 1:N
-    zz = 0;
-%   zz =  NonCrossable_PF(X(1, i), X(3, i),p(n_states * 2+1), x_y_1, X(2, i),X(4, i), V_1, 2, 1);
+%     zz = 0;
+    zz =  NonCrossable_PF(X(1, i), X(3, i),p(n_states * 2+ n_controls+1), x_y_1, X(2, i),X(4, i), V_1, 2, 1);
     if i == 1
         st = X(:, i);
         con = U(:, i);
         obj = obj + zz + (st - p((n_states + 1):(n_states * 2)))' * Q *...
-            (st - p((n_states + 1):(n_states * 2))) + con' * R * con +...
-            (U(:, i)-U(:, i-1))'*S*(U(:, i)-U(:, i-1))+...
-            (p((n_states*2+1):(n_states*2+n_controls)))'*M*(p((n_states*2+1):(n_states*2+n_controls)));    
+            (st - p((n_states + 1):(n_states * 2))) + con' * R * con +...         
+            (U(:, i) - p((n_states*2+1):(n_states*2+n_controls)))'*M*(U(:, i) - p((n_states*2+1):(n_states*2+n_controls)));    
         st_next = X(:, i + 1);
-        f_value = f(st, con); % this is define in previous step, it will return rhs
-        st_next_predict = st+ (T*f_value); % the state of next time step
+        f_value = f(st, con); %this is define in previous step, it will return rhs
+        st_next_predict = st+ (T*f_value);
+        % the state of next time step
         g = [g; st_next - st_next_predict];
     else     
         st = X(:, i);
-        con = U(:, i);            
+        con = U(:, i);             
         obj = obj + zz + (st - p((n_states + 1):(n_states * 2)))' * Q *...
             (st - p((n_states + 1):(n_states * 2))) + con' * R * con +...
             (U(:, i)-U(:, i-1))'*S*(U(:, i)-U(:, i-1));
         st_next = X(:, i + 1);
-        f_value = f(st, con); 
+        f_value = f(st, con); %this is define in previous step, it will return rhs
         st_next_predict = st+ (T*f_value);
+        % the state of next time step
         g = [g; st_next - st_next_predict];
-        % paraller compute the constrains, it equals state_next - state_next_predict
+        %paraller compute the constrains, it equals
+        %state_next - state_next_predict
     end
 end
 
