@@ -3,17 +3,18 @@
 %                                                       All rights reserved. 
 % ====================================================================================================================
 
-addpath('C:\Program Files\casadi')
+addpath('C:\Users\mehre\OneDrive\Desktop\CasADi\casadi-windows-matlabR2016a-v3.4.5')
 import casadi.*
 clc; 
 close all;
+clear all;
 
 % ====================================================================================================================
 %                                                       Set up the system
 % ====================================================================================================================
-Time_period = 25; % Total simulate time
-T = 0.05; % Sample time(s)
-N = 30; % Prediction Horizon	
+Time_period = 10; % Total simulate time
+T = 0.1; % Sample time(s)
+N = 50; % Prediction Horizon	
 t_vector = (0:T:Time_period);
 
 % Vehicle's information
@@ -92,15 +93,15 @@ Q(4,4) =0; Q(5,5) = 0; Q(6,6) = 0;
 
 %Weighting matrix of controls
 R = zeros(n_controls, n_controls); 
-R(1,1) = 2e-8; R(2,2) = 500;
+R(1,1) = 2e-8; R(2,2) = 5e3;
 
 %Weighting matrix of increment within prediction horizon
 S = zeros(n_controls, n_controls); 
-S(1,1) = 5e-9; S(2,2) = 500;
+S(1,1) = 5e-9; S(2,2) = 5e3;
 
 %Weighting matrix of increment related to last control input
 M = zeros(n_controls, n_controls);
-M(1,1) = 5e-9; M(2,2) = 500;
+M(1,1) = 5e-9; M(2,2) = 5e3;
 
 
 % ====================================================================================================================
@@ -114,8 +115,8 @@ g = [g; st - p(1:n_states)];
 
 % The following loop is aim to calculate the cost function and constrains
 for i = 1:N
-%     zz = 0;
-    zz =  NonCrossable_PF(X(1, i), X(3, i),p(n_states * 2+ n_controls+1), x_y_1, X(2, i),X(4, i), V_1, 2, 1);
+     zz = 0;
+%    zz =  NonCrossable_PF(X(1, i), X(3, i),p(n_states * 2+ n_controls+1), x_y_1, X(2, i),X(4, i), V_1, 2, 1);
     if i == 1
         st = X(:, i);
         con = U(:, i);
@@ -143,8 +144,12 @@ for i = 1:N
     end
 end
 
-for i = 1:N-1
-    g = [g ; U(2, i+1) - U(2,i)];
+for i = 1:N
+    if i ==1
+        g = [g ; U(2, i) - p(n_states*2+n_controls)];
+    else
+        g = [g ; U(2, i) - U(2,i-1)];
+    end
 end
 
 for i = 1: N
@@ -179,12 +184,12 @@ args.lbg(1: n_states * (N+1)) = 0;
 args.ubg(1: n_states * (N+1)) = 0;
 
 % Increment of steering angle on front wheel
-args.lbg( n_states * (N+1)+1:n_states * (N+1)+N-1) = -5e-9;
-args.ubg( n_states * (N+1)+1:n_states * (N+1)+N-1) = 5e-9;
+args.lbg( n_states * (N+1)+1:n_states * (N+1)+N) = -1e-3;
+args.ubg( n_states * (N+1)+1:n_states * (N+1)+N) = 1e-3;
 
 % Increment of longituidal speed
-args.lbg( n_states * (N+1)+N :n_states * (N+1)+2*N-1 ) = -0.1;
-args.ubg( n_states * (N+1)+N : n_states * (N+1)+2*N-1) = 0.1;
+args.lbg( n_states * (N+1)+N+1 :n_states * (N+1)+2*N ) = -0.1;
+args.ubg( n_states * (N+1)+N+1 : n_states * (N+1)+2*N) = 0.1;
 
 %Longituidal position 
 args.lbx(1: n_states: n_states * (N+1), 1) = -inf;
@@ -216,8 +221,8 @@ args.lbx(n_states*(N+1)+1: 1: n_states * (N+1) +n_controls * N,1) = -5000;
 args.ubx(n_states*(N+1)+1: 1: n_states * (N+1) +n_controls * N,1) = 5000;
 
 %Steering angle on front wheel
-args.lbx(n_states*(N+1)+2: 2: n_states * (N+1) +n_controls * N,1) = -pi/2;
-args.ubx(n_states*(N+1)+2: 2: n_states * (N+1) +n_controls * N,1) = pi/2;
+args.lbx(n_states*(N+1)+2: 2: n_states * (N+1) +n_controls * N,1) = -pi/12;
+args.ubx(n_states*(N+1)+2: 2: n_states * (N+1) +n_controls * N,1) = pi/12;
 
 
 % ====================================================================================================================
@@ -240,7 +245,8 @@ u_cl = [];
 main_loop = tic; % timer on
 i = 1;
 
-while(norm((x0 - xs),2) > 1e-2 && mpciter < sim_time/T)
+%while(norm((x0 - xs),2) > 1e-2 && mpciter < sim_time/T)
+while(mpciter < sim_time/T)
 %   while mpciter < sim_time/T)
 %   this condition is check the error
     args.p = [x0 ; xs;u_prev(1,1); u_prev(1,2); x_x_1];
@@ -269,7 +275,7 @@ while(norm((x0 - xs),2) > 1e-2 && mpciter < sim_time/T)
 %   This is the most important information, use this to plot
     X0 = reshape(full(sol.x(1:n_states*(N+1)))',n_states,N+1)'; % get solution TRAJECTORY
     X0 = [X0(2:end,:); X0(end,:)];
-    mpciter = mpciter + 1;
+    mpciter = mpciter + 1
     i = i +1 ;
 end
 
